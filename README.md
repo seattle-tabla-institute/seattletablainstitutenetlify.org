@@ -18,9 +18,11 @@ on Netlify.
 ## Architecture
 ```mermaid
 flowchart LR
-  Editor[Editor via /admin] --> Identity[Netlify Identity]
-  Identity --> Gateway[Git Gateway]
-  Gateway --> Repo[Git Repository]
+  Editor[Editor via /admin] --> Google[Google Sign-in]
+  Google --> Auth0[Auth0 Tenant]
+  Auth0 --> Functions[Netlify Functions Auth]
+  Functions --> Token[GitHub Token]
+  Token --> Repo[Git Repository]
   Repo --> Build[Netlify Build: npm run build]
   Build --> Static[Static Site Output]
 
@@ -58,10 +60,17 @@ Open `http://localhost:8000`.
 - CMS entry: `admin/index.html`
 
 ## Netlify CMS Setup
-1) Enable Netlify Identity.
-2) Enable Git Gateway.
-3) Invite editors.
-4) Visit `/admin/` on the deployed site and log in.
+This project uses Auth0 (Google sign-in) + Netlify Functions for CMS auth.
+
+1) Create an Auth0 Regular Web App and enable Google as a social connection.
+2) Set Auth0 callbacks:
+   - `https://<your-site>.netlify.app/.netlify/functions/auth-callback`
+   - `http://localhost:8000/.netlify/functions/auth-callback`
+3) Set Auth0 web origins and logout URLs:
+   - `https://<your-site>.netlify.app`
+   - `http://localhost:8000`
+4) Add Netlify environment variables (see `.env.example`).
+5) Deploy and log in at `/admin/` with Google.
 
 ## Notes
 - Update PayPal links when ready.
