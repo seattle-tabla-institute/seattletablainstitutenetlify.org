@@ -2,7 +2,7 @@ backend:
   name: github
   repo: razanaqvi77/seattletablainstitute
   branch: main
-  auth_endpoint: /.netlify/functions/auth-start
+  auth_endpoint: https://seattletablainstitute.netlify.app/.netlify/functions/auth-start
 
 media_folder: "assets/uploads"
 public_folder: "/assets/uploads"
