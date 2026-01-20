@@ -77,15 +77,21 @@ lightweight CMS for non-developer updates.
 - Avoid generic layouts; emphasize a welcoming community feel.
 
 ## CMS (Phase 1)
-- Use Decap CMS (Netlify CMS) with Netlify Identity + Git Gateway.
+- Use Decap CMS (Netlify CMS) with Auth0 (Google sign-in) and Netlify Functions.
 - Events managed as Markdown files in `content/events/`.
 - Classes and gallery managed as JSON files in `data/`.
 - Netlify build runs `scripts/build-content.js` to generate `data/events.json`.
+ - Netlify Functions return a GitHub token for CMS commits to `main`.
 
 ## Build and Deployment
 - Netlify runs `npm run build` on deploy.
 - The build script compiles event Markdown into JSON for client rendering.
 - Static assets are served from the repo root.
+
+## Authentication
+- Editors sign in with Google via Auth0.
+- Auth0 callback handled by Netlify Functions at `/.netlify/functions/auth-callback`.
+- Authorized emails are controlled via `CMS_ALLOWED_EMAILS`.
 
 ## Payments (v1)
 - Keep PayPal for speed to launch.
