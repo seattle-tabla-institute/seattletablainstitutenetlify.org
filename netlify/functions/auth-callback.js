@@ -40,6 +40,25 @@ const parseState = (state) => {
   }
 };
 
+const getOriginFromEvent = (event) => {
+  const headerOrigin = event.headers?.origin;
+  if (headerOrigin) {
+    return headerOrigin;
+  }
+
+  const referer = event.headers?.referer || event.headers?.referrer;
+  if (referer) {
+    try {
+      return new URL(referer).origin;
+    } catch (error) {
+      return "";
+    }
+  }
+
+  const host = event.headers?.host;
+  return host ? `https://${host}` : "";
+};
+
 const isEmailAllowed = (email) => {
   const allowed = (process.env.CMS_ALLOWED_EMAILS || "")
     .split(",")
@@ -53,35 +72,16 @@ const isEmailAllowed = (email) => {
 };
 
 exports.handler = async (event) => {
-  try {
-    const domain = (process.env.AUTH0_DOMAIN || "").replace(/^https?:\/\//, "");
-    const githubToken = process.env.GITHUB_TOKEN;
-    if (!domain || !githubToken) {
-      return { statusCode: 500, body: "Auth configuration missing." };
-    }
+  const stateData = parseState(event.queryStringParameters?.state);
+  const provider = stateData.provider || "github";
+  const fallbackOrigin =
+    process.env.URL || process.env.DEPLOY_PRIME_URL || getOriginFromEvent(event);
+  const origin = stateData.origin || fallbackOrigin || "*";
 
-    const code = event.queryStringParameters?.code;
-    const state = event.queryStringParameters?.state;
-    if (!code) {
-      return { statusCode: 400, body: "Missing code." };
-    }
-
-    const stateData = parseState(state);
-    const tokenData = await exchangeCodeForToken(domain, code);
-    const userInfo = await fetchUserInfo(domain, tokenData.access_token);
-    const email = userInfo.email;
-
-    if (!email || !isEmailAllowed(email)) {
-      return { statusCode: 403, body: "Unauthorized." };
-    }
-
-    const origin =
-      stateData.origin ||
-      process.env.URL ||
-      process.env.DEPLOY_PRIME_URL ||
-      "*";
-
-    const payload = { token: githubToken, provider: "github" };
+  const respondWithAuth = (status, payload) => {
+    const message = `authorization:${provider}:${status}:${JSON.stringify(
+      payload
+    )}`;
     const body = `<!DOCTYPE html>
 <html lang="en">
   <head>
@@ -91,7 +91,7 @@ exports.handler = async (event) => {
   <body>
     <script>
       (function () {
-        var message = ${JSON.stringify(payload)};
+        var message = ${JSON.stringify(message)};
         var origin = ${JSON.stringify(origin)};
         if (window.opener) {
           window.opener.postMessage(message, origin);
@@ -107,7 +107,33 @@ exports.handler = async (event) => {
       headers: { "Content-Type": "text/html" },
       body
     };
+  };
+
+  try {
+    const domain = (process.env.AUTH0_DOMAIN || "").replace(/^https?:\/\//, "");
+    const githubToken = process.env.GITHUB_TOKEN;
+    if (!domain || !githubToken) {
+      return respondWithAuth("error", {
+        message: "Auth configuration missing."
+      });
+    }
+
+    const code = event.queryStringParameters?.code;
+    if (!code) {
+      return respondWithAuth("error", { message: "Missing code." });
+    }
+
+    const tokenData = await exchangeCodeForToken(domain, code);
+    const userInfo = await fetchUserInfo(domain, tokenData.access_token);
+    const email = userInfo.email;
+
+    if (!email || !isEmailAllowed(email)) {
+      return respondWithAuth("error", { message: "Unauthorized." });
+    }
+
+    const payload = { token: githubToken, provider: "github" };
+    return respondWithAuth("success", payload);
   } catch (error) {
-    return { statusCode: 500, body: "Auth callback failed." };
+    return respondWithAuth("error", { message: "Auth callback failed." });
   }
 };
