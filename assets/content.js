@@ -52,15 +52,32 @@ const setPricingCards = (element, pricing) => {
 };
 
 const renderClasses = async () => {
-  const data = await loadJson("data/classes.json");
-  if (!data) {
-    return;
-  }
-
   const youthHighlights = document.querySelector("#youth-highlights");
   const youthLocations = document.querySelector("#youth-locations");
   const youthSchedule = document.querySelector("#youth-schedule");
   const youthPricing = document.querySelector("#youth-pricing");
+  const adultHighlights = document.querySelector("#adult-highlights");
+  const adultLocations = document.querySelector("#adult-locations");
+  const adultSchedule = document.querySelector("#adult-schedule");
+  const adultPricing = document.querySelector("#adult-pricing");
+
+  if (
+    !youthHighlights &&
+    !youthLocations &&
+    !youthSchedule &&
+    !youthPricing &&
+    !adultHighlights &&
+    !adultLocations &&
+    !adultSchedule &&
+    !adultPricing
+  ) {
+    return;
+  }
+
+  const data = await loadJson("data/classes.json");
+  if (!data) {
+    return;
+  }
 
   if (data.youth) {
     setList(youthHighlights, data.youth.highlights || []);
@@ -70,11 +87,6 @@ const renderClasses = async () => {
     }
     setPricingCards(youthPricing, data.youth.pricing || []);
   }
-
-  const adultHighlights = document.querySelector("#adult-highlights");
-  const adultLocations = document.querySelector("#adult-locations");
-  const adultSchedule = document.querySelector("#adult-schedule");
-  const adultPricing = document.querySelector("#adult-pricing");
 
   if (data.adult) {
     setList(adultHighlights, data.adult.highlights || []);
@@ -108,14 +120,18 @@ const createEventCard = (event) => {
 };
 
 const renderEvents = async () => {
+  const upcomingContainer = document.querySelector("#events-upcoming");
+  const pastContainer = document.querySelector("#events-past");
+  const emptyMessage = document.querySelector("#events-empty");
+
+  if (!upcomingContainer && !pastContainer && !emptyMessage) {
+    return;
+  }
+
   const data = await loadJson("data/events.json");
   if (!data) {
     return;
   }
-
-  const upcomingContainer = document.querySelector("#events-upcoming");
-  const pastContainer = document.querySelector("#events-past");
-  const emptyMessage = document.querySelector("#events-empty");
 
   if (upcomingContainer) {
     upcomingContainer.innerHTML = "";
@@ -151,12 +167,18 @@ const toYouTubeEmbed = (url) => {
 };
 
 const renderGallery = async () => {
+  const photoGrid = document.querySelector("#gallery-photos");
+  const videoGrid = document.querySelector("#gallery-videos");
+
+  if (!photoGrid && !videoGrid) {
+    return;
+  }
+
   const data = await loadJson("data/gallery.json");
   if (!data) {
     return;
   }
 
-  const photoGrid = document.querySelector("#gallery-photos");
   if (photoGrid) {
     photoGrid.innerHTML = "";
     (data.photos || []).forEach((photo) => {
@@ -170,7 +192,6 @@ const renderGallery = async () => {
     });
   }
 
-  const videoGrid = document.querySelector("#gallery-videos");
   if (videoGrid) {
     videoGrid.innerHTML = "";
     (data.videos || []).forEach((video) => {
