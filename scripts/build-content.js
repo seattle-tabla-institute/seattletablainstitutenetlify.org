@@ -1,11 +1,10 @@
 const fs = require("fs");
 const path = require("path");
-const matter = require("gray-matter");
-const { marked } = require("marked");
+const Markdoc = require("@markdoc/markdoc");
 
 const rootDir = path.join(__dirname, "..");
 const eventsDir = path.join(rootDir, "content", "events");
-const dataDir = path.join(rootDir, "data");
+const dataDir = path.join(rootDir, "public", "data");
 
 const parseDate = (value) => {
   if (value instanceof Date) {
@@ -40,18 +39,30 @@ const toDateLabel = (value) => {
   });
 };
 
+const renderBody = (value) => {
+  if (!value) {
+    return "";
+  }
+  const ast = Markdoc.parse(value);
+  const content = Markdoc.transform(ast);
+  return Markdoc.renderers.html(content);
+};
+
 const loadEvents = () => {
   if (!fs.existsSync(eventsDir)) {
     return [];
   }
-  const files = fs.readdirSync(eventsDir).filter((file) => file.endsWith(".md"));
+  const files = fs
+    .readdirSync(eventsDir)
+    .filter((file) => file.endsWith(".json"));
   return files.map((file) => {
     const fullPath = path.join(eventsDir, file);
     const raw = fs.readFileSync(fullPath, "utf8");
-    const { data, content } = matter(raw);
+    const data = JSON.parse(raw);
     const dateValue = toDateValue(data.date);
+    const bodySource = typeof data.body === "string" ? data.body.trim() : "";
     return {
-      slug: path.basename(file, ".md"),
+      slug: path.basename(file, ".json"),
       title: data.title || "Untitled Event",
       date: dateValue,
       dateLabel: toDateLabel(dateValue),
@@ -61,15 +72,13 @@ const loadEvents = () => {
       featured: Boolean(data.featured),
       summary: data.summary || "",
       image: data.image || "",
-      body: content.trim() ? marked.parse(content.trim()) : ""
+      body: bodySource ? renderBody(bodySource) : ""
     };
   });
 };
 
 const writeEvents = (events) => {
-  if (!fs.existsSync(dataDir)) {
-    fs.mkdirSync(dataDir, { recursive: true });
-  }
+  fs.mkdirSync(dataDir, { recursive: true });
 
   const sortByDate = (a, b) => {
     const aTime = Date.parse(a.date) || 0;
